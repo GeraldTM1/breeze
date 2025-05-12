@@ -83,12 +83,36 @@ def update_graph():
         name='Players',
         line=dict(color='#2962FF', width=2),
         fill='tozeroy',
-        fillcolor='rgba(41, 98, 255, 0.1)'
+        fillcolor='rgba(41, 98, 255, 0.1)',
+        visible=True
+    ))
+    
+    # Add candlestick data (using players as open/close/high/low)
+    df['open'] = df['players'].shift(1)
+    df['high'] = df[['players', 'open']].max(axis=1)
+    df['low'] = df[['players', 'open']].min(axis=1)
+    
+    fig.add_trace(go.Candlestick(
+        x=df['timestamp'],
+        open=df['open'],
+        high=df['high'],
+        low=df['low'],
+        close=df['players'],
+        name='Candles',
+        visible=False,
+        increasing=dict(line=dict(color='#00C805')),
+        decreasing=dict(line=dict(color='#FF3B28'))
     ))
     
     # Layout configuration
     fig.update_layout(
-        title='Server Population History',
+        title=dict(
+            text='Server Population History',
+            y=0.95,
+            x=0.5,
+            xanchor='center',
+            yanchor='top'
+        ),
         xaxis=dict(
             title='Time',
             showgrid=True,
@@ -112,9 +136,33 @@ def update_graph():
         plot_bgcolor='#1E1E1E',
         paper_bgcolor='#1E1E1E',
         font=dict(color='#FFFFFF'),
-        margin=dict(l=50, r=50, b=50, t=50, pad=4),
+        margin=dict(l=50, r=50, b=50, t=100, pad=4),
         hovermode='x unified',
-        showlegend=False
+        showlegend=False,
+        updatemenus=[
+            dict(
+                type="buttons",
+                direction="left",
+                buttons=[
+                    dict(
+                        args=[{"visible": [True, False]}],
+                        label="Line Chart",
+                        method="update"
+                    ),
+                    dict(
+                        args=[{"visible": [False, True]}],
+                        label="Candlestick",
+                        method="update"
+                    )
+                ],
+                pad={"r": 10, "t": 10},
+                showactive=True,
+                x=0.1,
+                xanchor="left",
+                y=1.1,
+                yanchor="top"
+            ),
+        ]
     )
     
     # Save as HTML
