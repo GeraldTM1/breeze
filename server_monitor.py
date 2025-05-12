@@ -51,10 +51,19 @@ def save_population(conn, players):
 
 def setup_git():
     repo_path = os.path.dirname(os.path.abspath(__file__))
-    return Repo(repo_path)
+    repo = Repo(repo_path)
+    # Configure auto push
+    if 'origin' in repo.remotes:
+        origin = repo.remotes.origin
+        origin.pull()  # Pull latest changes first
+    return repo
 
 def upload_to_github(repo):
     try:
+        # Force pull latest changes
+        origin = repo.remote(name='origin')
+        origin.pull()
+        
         # Create HTML file with update time
         current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         html_content = f"""
@@ -79,8 +88,13 @@ def upload_to_github(repo):
         # Stage both files
         repo.index.add(['server_population.png', 'index.html'])
         repo.index.commit(f"Update graph {current_time}")
-        origin = repo.remote(name='origin')
-        origin.push()
+        
+        # Stage and commit with force
+        repo.git.add('--all')  # Stage all changes
+        repo.git.commit('-m', f"Update graph {current_time}", '--allow-empty')
+        
+        # Force push to ensure updates
+        origin.push(force=True)
         print("✅ Graph is live on the website!")
     except Exception as e:
         print(f"❌ Failed to update website: {e}")
@@ -136,7 +150,7 @@ def main():
                 save_population(conn, players)
                 print(f"Saved player count: {players} at {datetime.now()}")
                 update_graph()
-            time.sleep(180)  # Changed to 180 seconds (3 minutes)
+            time.sleep(15)  # Changed to 180 seconds (3 minutes)
     except KeyboardInterrupt:
         print("\nShutting down gracefully...")
         conn.close()
