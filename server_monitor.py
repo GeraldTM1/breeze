@@ -165,8 +165,21 @@ def update_graph():
         ]
     )
     
-    # Save as HTML
-    fig.write_html('server_population.html')
+    # Add update time to the graph
+    fig.update_layout(
+        annotations=[
+            dict(
+                text=f"Last Updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                xref="paper", yref="paper",
+                x=0.02, y=1.05,
+                showarrow=False,
+                font=dict(size=14, color='green')
+            )
+        ]
+    )
+    
+    # Save as standalone HTML
+    fig.write_html('server_population.html', full_html=True, include_plotlyjs='cdn')
     
     # Upload to GitHub after saving
     repo = setup_git()
@@ -174,36 +187,11 @@ def update_graph():
 
 def upload_to_github(repo):
     try:
-        # Create HTML file with update time
-        current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        html_content = f"""
-        <html>
-        <head>
-            <meta http-equiv="refresh" content="30">
-            <style>
-                body {{ font-family: Arial, sans-serif; text-align: center; }}
-                .update-time {{ color: green; font-size: 18px; margin: 20px; }}
-                iframe {{ width: 100%; height: 90vh; border: none; }}
-            </style>
-        </head>
-        <body>
-            <div class="update-time">Last Updated: {current_time}</div>
-            <iframe src="server_population.html"></iframe>
-        </body>
-        </html>
-        """
-        with open('index.html', 'w') as f:
-            f.write(html_content)
-
-        # Stage both files
-        repo.index.add(['server_population.html', 'index.html'])
-        repo.index.commit(f"Update graph {current_time}")
+        # Stage only the graph file
+        repo.index.add(['server_population.html'])
+        repo.index.commit(f"Update graph {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         
-        # Stage and commit with force
-        repo.git.add('--all')
-        repo.git.commit('-m', f"Update graph {current_time}", '--allow-empty')
-        
-        # Force push to ensure updates
+        # Push changes
         origin = repo.remote(name='origin')
         origin.push(force=True)
         print("✅ Graph is live on the website!")
