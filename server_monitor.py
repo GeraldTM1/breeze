@@ -55,16 +55,35 @@ def setup_git():
 
 def upload_to_github(repo):
     try:
-        # Stage the image file
-        repo.index.add(['server_population.png'])
-        # Commit with timestamp
-        repo.index.commit(f"Update graph {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        # Push to GitHub
+        # Create HTML file with update time
+        current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        html_content = f"""
+        <html>
+        <head>
+            <meta http-equiv="refresh" content="180">
+            <style>
+                body {{ font-family: Arial, sans-serif; text-align: center; }}
+                .update-time {{ color: green; font-size: 18px; margin: 20px; }}
+                img {{ max-width: 100%; height: auto; }}
+            </style>
+        </head>
+        <body>
+            <div class="update-time">Last Updated: {current_time}</div>
+            <img src="server_population.png" alt="Server Population Graph">
+        </body>
+        </html>
+        """
+        with open('index.html', 'w') as f:
+            f.write(html_content)
+
+        # Stage both files
+        repo.index.add(['server_population.png', 'index.html'])
+        repo.index.commit(f"Update graph {current_time}")
         origin = repo.remote(name='origin')
         origin.push()
-        print("Successfully uploaded to GitHub")
+        print("✅ Graph is live on the website!")
     except Exception as e:
-        print(f"Error uploading to GitHub: {e}")
+        print(f"❌ Failed to update website: {e}")
 
 def update_graph():
     conn = sqlite3.connect('server_stats.db')
@@ -77,6 +96,10 @@ def update_graph():
     df['timestamp'] = pd.to_datetime(df['timestamp'])
     conn.close()
 
+    # Clear any existing plots
+    plt.clf()
+    plt.close('all')
+    
     plt.figure(figsize=(15, 8))
     plt.plot(df['timestamp'], df['players'], color='blue', linewidth=2, marker='o', markersize=4)
     
@@ -84,11 +107,19 @@ def update_graph():
     plt.xlabel('Time')
     plt.ylabel('Number of Players')
     
+    # Add live status text
+    current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    plt.text(0.02, 0.98, f'Last Updated: {current_time}', 
+             transform=plt.gca().transAxes, 
+             color='green',
+             bbox=dict(facecolor='white', alpha=0.8, edgecolor='none'),
+             fontsize=10)
+    
     plt.xticks(rotation=45)
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
     
-    plt.savefig('server_population.png')
+    plt.savefig('server_population.png', dpi=300)
     plt.close()
     
     # Upload to GitHub after saving
@@ -105,7 +136,7 @@ def main():
                 save_population(conn, players)
                 print(f"Saved player count: {players} at {datetime.now()}")
                 update_graph()
-            time.sleep(15)
+            time.sleep(180)  # Changed to 180 seconds (3 minutes)
     except KeyboardInterrupt:
         print("\nShutting down gracefully...")
         conn.close()
