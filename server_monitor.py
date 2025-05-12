@@ -38,7 +38,7 @@ def get_server_data():
         return data.get('Data', {}).get('clients', 0)
     except requests.exceptions.RequestException as e:
         print(f"Error fetching server data: {e}")
-        time.sleep(60)
+        time.sleep(30)  # Changed from 60 to 30
         return None
 
 def save_population(conn, players):
@@ -150,7 +150,7 @@ def main():
                 save_population(conn, players)
                 print(f"Saved player count: {players} at {datetime.now()}")
                 update_graph()
-            time.sleep(15)  # Changed to 180 seconds (3 minutes)
+            time.sleep(30)  # Changed from 15 to 30
     except KeyboardInterrupt:
         print("\nShutting down gracefully...")
         conn.close()
