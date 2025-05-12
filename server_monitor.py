@@ -92,21 +92,13 @@ def update_graph():
     df['high'] = df[['players', 'open']].max(axis=1)
     df['low'] = df[['players', 'open']].min(axis=1)
     
-    # Group data by time intervals when there's no change
-    df['group'] = (df['players'].diff() != 0).cumsum()
-    grouped_df = df.groupby('group').agg({
-        'timestamp': 'first',
-        'players': ['first', 'max', 'min', 'last']
-    })
-    grouped_df.columns = ['timestamp', 'open', 'high', 'low', 'close']
-    
     # Add candlestick data with wider sticks
     fig.add_trace(go.Candlestick(
-        x=grouped_df['timestamp'],
-        open=grouped_df['open'],
-        high=grouped_df['high'],
-        low=grouped_df['low'],
-        close=grouped_df['close'],
+        x=df['timestamp'],
+        open=df['open'],
+        high=df['high'],
+        low=df['low'],
+        close=df['players'],
         name='Candles',
         visible=False,
         increasing=dict(line=dict(color='#00C805', width=2)),
@@ -117,16 +109,6 @@ def update_graph():
             bgcolor='#1E1E1E',
             font=dict(color='white', size=14)
         )
-    ))
-    
-    # Add line behind candlesticks
-    fig.add_trace(go.Scatter(
-        x=df['timestamp'],
-        y=df['players'],
-        mode='lines',
-        name='Players Line',
-        line=dict(color='rgba(41, 98, 255, 0.5)', width=1),
-        visible=False
     ))
     
     # Update layout for better candlestick display
@@ -165,12 +147,12 @@ def update_graph():
                 direction="left",
                 buttons=[
                     dict(
-                        args=[{"visible": [True, False, False]}],
+                        args=[{"visible": [True, False]}],
                         label="Line Chart",
                         method="update"
                     ),
                     dict(
-                        args=[{"visible": [False, True, True]}],
+                        args=[{"visible": [False, True]}],
                         label="Candlestick",
                         method="update"
                     )
@@ -199,7 +181,7 @@ def update_graph():
     )
     
     # Save as standalone HTML
-    fig.write_html('server_population.html', full_html=True, include_plotlyjs='cdn')
+    fig.write_html('index.html', full_html=True, include_plotlyjs='cdn')
     
     # Upload to GitHub after saving
     repo = setup_git()
@@ -208,7 +190,7 @@ def update_graph():
 def upload_to_github(repo):
     try:
         # Stage only the graph file
-        repo.index.add(['server_population.html'])
+        repo.index.add(['index.html'])
         repo.index.commit(f"Update graph {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         
         # Push changes
