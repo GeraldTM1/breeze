@@ -6,6 +6,9 @@ from datetime import datetime
 import time
 import os
 from git import Repo
+# Replace matplotlib import with plotly
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 def setup_database():
     conn = sqlite3.connect('server_stats.db')
@@ -58,47 +61,6 @@ def setup_git():
         origin.pull()  # Pull latest changes first
     return repo
 
-def upload_to_github(repo):
-    try:
-        # Force pull latest changes
-        origin = repo.remote(name='origin')
-        origin.pull()
-        
-        # Create HTML file with update time
-        current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        html_content = f"""
-        <html>
-        <head>
-            <meta http-equiv="refresh" content="180">
-            <style>
-                body {{ font-family: Arial, sans-serif; text-align: center; }}
-                .update-time {{ color: green; font-size: 18px; margin: 20px; }}
-                img {{ max-width: 100%; height: auto; }}
-            </style>
-        </head>
-        <body>
-            <div class="update-time">Last Updated: {current_time}</div>
-            <img src="server_population.png" alt="Server Population Graph">
-        </body>
-        </html>
-        """
-        with open('index.html', 'w') as f:
-            f.write(html_content)
-
-        # Stage both files
-        repo.index.add(['server_population.png', 'index.html'])
-        repo.index.commit(f"Update graph {current_time}")
-        
-        # Stage and commit with force
-        repo.git.add('--all')  # Stage all changes
-        repo.git.commit('-m', f"Update graph {current_time}", '--allow-empty')
-        
-        # Force push to ensure updates
-        origin.push(force=True)
-        print("✅ Graph is live on the website!")
-    except Exception as e:
-        print(f"❌ Failed to update website: {e}")
-
 def update_graph():
     conn = sqlite3.connect('server_stats.db')
     query = """
@@ -110,35 +72,72 @@ def update_graph():
     df['timestamp'] = pd.to_datetime(df['timestamp'])
     conn.close()
 
-    # Clear any existing plots
-    plt.clf()
-    plt.close('all')
+    # Create interactive plot
+    fig = go.Figure()
     
-    plt.figure(figsize=(15, 8))
-    plt.plot(df['timestamp'], df['players'], color='blue', linewidth=2, marker='o', markersize=4)
+    fig.add_trace(go.Scatter(
+        x=df['timestamp'],
+        y=df['players'],
+        mode='lines+markers',
+        name='Players',
+        line=dict(color='blue', width=2),
+        marker=dict(size=6)
+    ))
     
-    plt.title('Server Population History')
-    plt.xlabel('Time')
-    plt.ylabel('Number of Players')
+    fig.update_layout(
+        title='Server Population History',
+        xaxis_title='Time',
+        yaxis_title='Number of Players',
+        template='plotly_white',
+        hovermode='x unified',
+        xaxis=dict(tickangle=-45),
+        margin=dict(l=50, r=50, b=100, t=100, pad=4)
+    )
     
-    # Add live status text
-    current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    plt.text(0.02, 0.98, f'Last Updated: {current_time}', 
-             transform=plt.gca().transAxes, 
-             color='green',
-             bbox=dict(facecolor='white', alpha=0.8, edgecolor='none'),
-             fontsize=10)
-    
-    plt.xticks(rotation=45)
-    plt.grid(True, alpha=0.3)
-    plt.tight_layout()
-    
-    plt.savefig('server_population.png', dpi=300)
-    plt.close()
+    # Save as HTML
+    fig.write_html('server_population.html')
     
     # Upload to GitHub after saving
     repo = setup_git()
     upload_to_github(repo)
+
+def upload_to_github(repo):
+    try:
+        # Create HTML file with update time
+        current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        html_content = f"""
+        <html>
+        <head>
+            <meta http-equiv="refresh" content="30">
+            <style>
+                body {{ font-family: Arial, sans-serif; text-align: center; }}
+                .update-time {{ color: green; font-size: 18px; margin: 20px; }}
+                iframe {{ width: 100%; height: 90vh; border: none; }}
+            </style>
+        </head>
+        <body>
+            <div class="update-time">Last Updated: {current_time}</div>
+            <iframe src="server_population.html"></iframe>
+        </body>
+        </html>
+        """
+        with open('index.html', 'w') as f:
+            f.write(html_content)
+
+        # Stage both files
+        repo.index.add(['server_population.html', 'index.html'])
+        repo.index.commit(f"Update graph {current_time}")
+        
+        # Stage and commit with force
+        repo.git.add('--all')
+        repo.git.commit('-m', f"Update graph {current_time}", '--allow-empty')
+        
+        # Force push to ensure updates
+        origin = repo.remote(name='origin')
+        origin.push(force=True)
+        print("✅ Graph is live on the website!")
+    except Exception as e:
+        print(f"❌ Failed to update website: {e}")
 
 def main():
     conn = setup_database()
