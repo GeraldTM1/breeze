@@ -92,19 +92,44 @@ def update_graph():
     df['high'] = df[['players', 'open']].max(axis=1)
     df['low'] = df[['players', 'open']].min(axis=1)
     
+    # Group data by time intervals when there's no change
+    df['group'] = (df['players'].diff() != 0).cumsum()
+    grouped_df = df.groupby('group').agg({
+        'timestamp': 'first',
+        'players': ['first', 'max', 'min', 'last']
+    })
+    grouped_df.columns = ['timestamp', 'open', 'high', 'low', 'close']
+    
+    # Add candlestick data with wider sticks
     fig.add_trace(go.Candlestick(
-        x=df['timestamp'],
-        open=df['open'],
-        high=df['high'],
-        low=df['low'],
-        close=df['players'],
+        x=grouped_df['timestamp'],
+        open=grouped_df['open'],
+        high=grouped_df['high'],
+        low=grouped_df['low'],
+        close=grouped_df['close'],
         name='Candles',
         visible=False,
-        increasing=dict(line=dict(color='#00C805')),
-        decreasing=dict(line=dict(color='#FF3B28'))
+        increasing=dict(line=dict(color='#00C805', width=2)),
+        decreasing=dict(line=dict(color='#FF3B28', width=2)),
+        whiskerwidth=0.8,  # Width of the whiskers
+        opacity=0.9,       # Make candles slightly transparent
+        hoverlabel=dict(
+            bgcolor='#1E1E1E',
+            font=dict(color='white', size=14)
+        )
     ))
     
-    # Layout configuration
+    # Add line behind candlesticks
+    fig.add_trace(go.Scatter(
+        x=df['timestamp'],
+        y=df['players'],
+        mode='lines',
+        name='Players Line',
+        line=dict(color='rgba(41, 98, 255, 0.5)', width=1),
+        visible=False
+    ))
+    
+    # Update layout for better candlestick display
     fig.update_layout(
         title=dict(
             text='Server Population History',
@@ -117,15 +142,10 @@ def update_graph():
             title='Time',
             showgrid=True,
             gridcolor='#2B2B2B',
-            rangeslider=dict(visible=True),
-            rangeselector=dict(
-                buttons=list([
-                    dict(count=1, label="1h", step="hour", stepmode="backward"),
-                    dict(count=6, label="6h", step="hour", stepmode="backward"),
-                    dict(count=1, label="1d", step="day", stepmode="backward"),
-                    dict(count=7, label="1w", step="day", stepmode="backward"),
-                    dict(step="all")
-                ])
+            rangeslider=dict(
+                visible=True,
+                thickness=0.08,  # Thinner range slider
+                bgcolor='#2B2B2B'
             )
         ),
         yaxis=dict(
@@ -145,12 +165,12 @@ def update_graph():
                 direction="left",
                 buttons=[
                     dict(
-                        args=[{"visible": [True, False]}],
+                        args=[{"visible": [True, False, False]}],
                         label="Line Chart",
                         method="update"
                     ),
                     dict(
-                        args=[{"visible": [False, True]}],
+                        args=[{"visible": [False, True, True]}],
                         label="Candlestick",
                         method="update"
                     )
