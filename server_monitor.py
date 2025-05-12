@@ -72,26 +72,49 @@ def update_graph():
     df['timestamp'] = pd.to_datetime(df['timestamp'])
     conn.close()
 
-    # Create interactive plot
+    # Create TradingView-style plot
     fig = go.Figure()
     
+    # Add main line
     fig.add_trace(go.Scatter(
         x=df['timestamp'],
         y=df['players'],
-        mode='lines+markers',
+        mode='lines',
         name='Players',
-        line=dict(color='blue', width=2),
-        marker=dict(size=6)
+        line=dict(color='#2962FF', width=2),
+        fill='tozeroy',
+        fillcolor='rgba(41, 98, 255, 0.1)'
     ))
     
+    # Layout configuration
     fig.update_layout(
         title='Server Population History',
-        xaxis_title='Time',
-        yaxis_title='Number of Players',
-        template='plotly_white',
+        xaxis=dict(
+            title='Time',
+            showgrid=True,
+            gridcolor='#2B2B2B',
+            rangeslider=dict(visible=True),
+            rangeselector=dict(
+                buttons=list([
+                    dict(count=1, label="1h", step="hour", stepmode="backward"),
+                    dict(count=6, label="6h", step="hour", stepmode="backward"),
+                    dict(count=1, label="1d", step="day", stepmode="backward"),
+                    dict(count=7, label="1w", step="day", stepmode="backward"),
+                    dict(step="all")
+                ])
+            )
+        ),
+        yaxis=dict(
+            title='Number of Players',
+            showgrid=True,
+            gridcolor='#2B2B2B'
+        ),
+        plot_bgcolor='#1E1E1E',
+        paper_bgcolor='#1E1E1E',
+        font=dict(color='#FFFFFF'),
+        margin=dict(l=50, r=50, b=50, t=50, pad=4),
         hovermode='x unified',
-        xaxis=dict(tickangle=-45),
-        margin=dict(l=50, r=50, b=100, t=100, pad=4)
+        showlegend=False
     )
     
     # Save as HTML
